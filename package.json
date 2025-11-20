@@ -1,26 +1,35 @@
 {
-  "name": "my-app",
-  "version": "0.1.0",
-  "private": true,
+  "name": "duplicate-tab-detector",
+  "version": "1.0.0",
+  "description": "React hook that detects duplicated browser tabs and resets per-tab session ids.",
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "prepare": "npm run build",
+    "check": "tsc --noEmit"
   },
-  "dependencies": {
-    "next": "16.0.3",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+  "peerDependencies": {
+    "react": ">=18"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+    "@types/react": "^19.0.0",
+    "react": "^19.2.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3"
+  },
+  "keywords": [
+    "react",
+    "hook",
+    "sessionstorage",
+    "duplicate-tab",
+    "browser",
+    "localstorage"
+  ]
 }

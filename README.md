@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# duplicate-tab-detector
 
-## Getting Started
+React hook that spots duplicated browser tabs, clears the duplicated tab's `sessionStorage`, and assigns a fresh session id so each tab stays isolated.
 
-First, run the development server:
+## Install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install duplicate-tab-detector
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Usage
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```tsx
+import { useDuplicateTabSession } from "duplicate-tab-detector";
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+export function App() {
+  const { sessionId, instanceId, duplicateDetected, resetSession } =
+    useDuplicateTabSession({
+      onDuplicate: ({ previousSessionId, newSessionId }) => {
+        console.log("Duplicate detected", { previousSessionId, newSessionId });
+      },
+    });
 
-## Learn More
+  return (
+    <div>
+      <p>Session id: {sessionId ?? "loading..."}</p>
+      <p>Instance id: {instanceId ?? "loading..."}</p>
+      <p>
+        Status:{" "}
+        {duplicateDetected
+          ? "Duplicate tab detected; sessionStorage was cleared for this tab."
+          : "No duplicate detected for this tab."}
+      </p>
+      <button onClick={resetSession}>Reset session id manually</button>
+    </div>
+  );
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Options
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `sessionStorageKey` (default `tabSessionId`): key used to store the per-tab session id.
+- `requestKey` (default `tab-session-request`): `localStorage` key used to broadcast duplicate-detection requests.
+- `responseKey` (default `tab-session-response`): `localStorage` key used to answer duplicate-detection requests.
+- `onDuplicate`: callback invoked after a duplicate is detected and the session id is reset.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### What it does
 
-## Deploy on Vercel
+- Creates a per-tab session id (kept across reloads via `sessionStorage`).
+- When a tab is duplicated, the new tab broadcasts via `localStorage` and receives a response from the original tab.
+- Upon detecting that it is a duplicate, the duplicated tab clears its own `sessionStorage`, generates a new session id, and updates state.
+- Works even when storage is unavailable (privacy modes) by falling back to in-memory ids.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The hook only runs in the browser; server-side renders simply see the initial `null` values until hydration.
+- The package ships both ESM and CJS builds; TypeScript typings are included.
