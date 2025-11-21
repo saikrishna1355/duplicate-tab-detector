@@ -10,11 +10,16 @@ npm install duplicate-tab-detector
 
 ## Usage
 
-One-line side-effect import (automatically starts detection without needing a variable):
+Pick the style that fits your app:
 
-```tsx
-import "duplicate-tab-detector";
-```
+- **Side-effect only (no lint warnings):** starts detection as soon as the module loads.
+  ```tsx
+  import "duplicate-tab-detector";
+  ```
+- **Hook with UI:** use the hook to render state or add your own handler.
+  ```tsx
+  import { useDuplicateTabSession } from "duplicate-tab-detector";
+  ```
 
 Full example with a simple UI:
 
@@ -47,6 +52,13 @@ export function App() {
 
 If you prefer to start detection manually (for example, outside of React) you can
 call `startDuplicateTabSession()` from the package entry point.
+
+### Behavior at a glance (for developers)
+
+- The first import starts listening for duplicate tabs and broadcasts via `localStorage`.
+- A duplicated tab clears its own `sessionStorage`, writes a fresh session id, and sets `duplicateDetected` to `true`.
+- Storage failures (private mode, disabled storage) are tolerated by falling back to in-memory ids.
+- SSR is safe: when `window` is missing, the hook returns `null` state until the browser hydrates.
 
 ### Options
 

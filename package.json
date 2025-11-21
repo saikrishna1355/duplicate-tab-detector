@@ -1,6 +1,6 @@
 {
   "name": "duplicate-tab-detector",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "React hook that detects duplicated browser tabs and resets per-tab session ids.",
   "license": "MIT",
   "sideEffects": [
@@ -30,9 +30,16 @@
   "keywords": [
     "react",
     "hook",
-    "sessionstorage",
+    "react-hook",
     "duplicate-tab",
+    "duplicate-tabs",
+    "tab-detector",
+    "tab-session",
+    "session-id",
+    "sessionstorage",
+    "localstorage",
+    "storage-event",
     "browser",
-    "localstorage"
+    "frontend"
   ]
 }
