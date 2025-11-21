@@ -1,9 +1,12 @@
 {
   "name": "duplicate-tab-detector",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "React hook that detects duplicated browser tabs and resets per-tab session ids.",
   "license": "MIT",
-  "sideEffects": false,
+  "sideEffects": [
+    "dist/index.js",
+    "dist/index.mjs"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

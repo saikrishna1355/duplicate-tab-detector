@@ -22,6 +22,16 @@ type DuplicateTabState = {
      */
     resetSession: () => string | null;
 };
+
+type DuplicateTabSessionController = {
+    getState: () => DuplicateTabState;
+    subscribe: (listener: (state: DuplicateTabState) => void) => () => void;
+    resetSession: () => string | null;
+    setOnDuplicate: (handler?: DuplicateTabOptions["onDuplicate"]) => void;
+    stop?: () => void;
+};
+declare function startDuplicateTabSession(options?: DuplicateTabOptions): DuplicateTabSessionController;
+
 /**
  * Listen for duplicated browser tabs that share the same `sessionStorage` state.
  * When a duplicate is detected this hook clears the duplicated tab's
@@ -29,4 +39,4 @@ type DuplicateTabState = {
  */
 declare function useDuplicateTabSession(options?: DuplicateTabOptions): DuplicateTabState;
 
-export { type DuplicateTabEvent, type DuplicateTabOptions, type DuplicateTabState, useDuplicateTabSession };
+export { type DuplicateTabEvent, type DuplicateTabOptions, type DuplicateTabState, useDuplicateTabSession as default, startDuplicateTabSession, useDuplicateTabSession };

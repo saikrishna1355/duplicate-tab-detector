@@ -1,103 +1,105 @@
-"use strict";
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+import { DuplicateTabOptions, DuplicateTabState } from "./types";
 
-// src/index.ts
-var index_exports = {};
-__export(index_exports, {
-  default: () => useDuplicateTabSession,
-  startDuplicateTabSession: () => startDuplicateTabSession,
-  useDuplicateTabSession: () => useDuplicateTabSession
-});
-module.exports = __toCommonJS(index_exports);
-
-// src/sessionManager.ts
-var DEFAULT_KEYS = {
+const DEFAULT_KEYS = {
   session: "tabSessionId",
   request: "tab-session-request",
-  response: "tab-session-response"
+  response: "tab-session-response",
+} as const;
+
+export type DuplicateTabSessionController = {
+  getState: () => DuplicateTabState;
+  subscribe: (listener: (state: DuplicateTabState) => void) => () => void;
+  resetSession: () => string | null;
+  setOnDuplicate: (handler?: DuplicateTabOptions["onDuplicate"]) => void;
+  stop?: () => void;
 };
-var controllers = /* @__PURE__ */ new Map();
-var createId = () => {
+
+const controllers = new Map<string, DuplicateTabSessionController>();
+
+const createId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
-var getKey = (sessionStorageKey, requestKey, responseKey) => [sessionStorageKey, requestKey, responseKey].join("|");
-function startDuplicateTabSession(options = {}) {
+
+const getKey = (sessionStorageKey: string, requestKey: string, responseKey: string) =>
+  [sessionStorageKey, requestKey, responseKey].join("|");
+
+export function startDuplicateTabSession(
+  options: DuplicateTabOptions = {},
+): DuplicateTabSessionController {
   const sessionStorageKey = options.sessionStorageKey ?? DEFAULT_KEYS.session;
   const requestKey = options.requestKey ?? DEFAULT_KEYS.request;
   const responseKey = options.responseKey ?? DEFAULT_KEYS.response;
   const controllerKey = getKey(sessionStorageKey, requestKey, responseKey);
+
   const existing = controllers.get(controllerKey);
   if (existing) {
     existing.setOnDuplicate(options.onDuplicate);
     return existing;
   }
+
   let onDuplicate = options.onDuplicate;
-  let sessionId = null;
-  let instanceId = null;
+  let sessionId: string | null = null;
+  let instanceId: string | null = null;
   let duplicateDetected = false;
-  const listeners = /* @__PURE__ */ new Set();
-  const resetSession = () => {
+
+  const listeners = new Set<(state: DuplicateTabState) => void>();
+
+  const resetSession = (): string | null => {
     if (typeof window === "undefined") return null;
+
     const next = createId();
     try {
       window.sessionStorage.setItem(sessionStorageKey, next);
     } catch {
+      // Ignore write errors (e.g. disabled storage)
     }
     sessionId = next;
     duplicateDetected = false;
     notify();
     return next;
   };
-  const snapshot = () => ({
+
+  const snapshot = (): DuplicateTabState => ({
     sessionId,
     instanceId,
     duplicateDetected,
-    resetSession
+    resetSession,
   });
+
   const notify = () => {
     const state = snapshot();
     listeners.forEach((listener) => listener(state));
   };
-  const subscribe = (listener) => {
+
+  const subscribe = (listener: (state: DuplicateTabState) => void) => {
     listeners.add(listener);
     listener(snapshot());
     return () => listeners.delete(listener);
   };
-  const controller = {
+
+  const controller: DuplicateTabSessionController = {
     getState: snapshot,
     subscribe,
     resetSession,
-    setOnDuplicate: (handler) => {
+    setOnDuplicate: (handler?: DuplicateTabOptions["onDuplicate"]) => {
       onDuplicate = handler;
-    }
+    },
   };
+
   controllers.set(controllerKey, controller);
+
   if (typeof window !== "undefined") {
     let handledDuplicate = false;
     let active = true;
-    const writeSessionId = (value) => {
+
+    const writeSessionId = (value: string) => {
       sessionId = value;
       notify();
     };
+
     const ensureSessionId = () => {
       try {
         const existingSessionId = window.sessionStorage.getItem(sessionStorageKey);
@@ -115,106 +117,99 @@ function startDuplicateTabSession(options = {}) {
         return fallback;
       }
     };
+
     const currentInstanceId = createId();
     instanceId = currentInstanceId;
     notify();
+
     let currentSessionId = ensureSessionId();
+
     const handleDuplicate = () => {
       if (!active || handledDuplicate) return;
       handledDuplicate = true;
+
       const previous = currentSessionId;
       const nextSessionId = createId();
+
       try {
         window.sessionStorage.clear();
         window.sessionStorage.setItem(sessionStorageKey, nextSessionId);
       } catch {
+        // Ignore when sessionStorage is blocked or unavailable
       }
+
       currentSessionId = nextSessionId;
       writeSessionId(nextSessionId);
       duplicateDetected = true;
       notify();
+
       onDuplicate?.({
         previousSessionId: previous,
         newSessionId: nextSessionId,
-        instanceId: currentInstanceId
+        instanceId: currentInstanceId,
       });
     };
-    const onStorage = (event) => {
+
+    const onStorage = (event: StorageEvent) => {
       if (!event.key || !event.newValue) return;
+
       try {
-        const payload = JSON.parse(event.newValue);
+        const payload = JSON.parse(event.newValue as string);
+
         if (event.key === requestKey) {
-          if (payload.sessionId === currentSessionId && payload.instanceId !== currentInstanceId) {
+          if (
+            payload.sessionId === currentSessionId &&
+            payload.instanceId !== currentInstanceId
+          ) {
             const response = JSON.stringify({
               sessionId: currentSessionId,
               fromInstanceId: currentInstanceId,
               toInstanceId: payload.instanceId,
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
             try {
               window.localStorage.setItem(responseKey, response);
             } catch {
+              // Ignore if localStorage is blocked
             }
           }
         } else if (event.key === responseKey) {
-          if (payload.toInstanceId === currentInstanceId && payload.sessionId === currentSessionId) {
+          if (
+            payload.toInstanceId === currentInstanceId &&
+            payload.sessionId === currentSessionId
+          ) {
             handleDuplicate();
           }
         }
       } catch {
+        // Ignore malformed payloads and storage errors
       }
     };
+
     window.addEventListener("storage", onStorage);
+
     try {
       const request = JSON.stringify({
         sessionId: currentSessionId,
         instanceId: currentInstanceId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       window.localStorage.setItem(requestKey, request);
     } catch {
+      // Ignore if localStorage is blocked
     }
+
     const cleanup = () => {
       if (!active) return;
       active = false;
       window.removeEventListener("storage", onStorage);
     };
+
+    // Expose cleanup on controller to allow tests or advanced consumers to stop listeners.
     controller.stop = cleanup;
   }
+
   return controller;
 }
 
-// src/useDuplicateTabSession.ts
-var import_react = require("react");
-function useDuplicateTabSession(options = {}) {
-  const sessionStorageKey = options.sessionStorageKey ?? DEFAULT_KEYS.session;
-  const requestKey = options.requestKey ?? DEFAULT_KEYS.request;
-  const responseKey = options.responseKey ?? DEFAULT_KEYS.response;
-  const controller = (0, import_react.useMemo)(
-    () => startDuplicateTabSession({
-      sessionStorageKey,
-      requestKey,
-      responseKey
-    }),
-    [sessionStorageKey, requestKey, responseKey]
-  );
-  (0, import_react.useEffect)(() => {
-    controller.setOnDuplicate(options.onDuplicate);
-  }, [controller, options.onDuplicate]);
-  const subscribe = (0, import_react.useMemo)(
-    () => (onStoreChange) => controller.subscribe(onStoreChange),
-    [controller]
-  );
-  const getSnapshot = (0, import_react.useMemo)(() => controller.getState, [controller]);
-  const state = (0, import_react.useSyncExternalStore)(subscribe, getSnapshot, getSnapshot);
-  const resetSession = (0, import_react.useCallback)(() => controller.resetSession(), [controller]);
-  return { ...state, resetSession };
-}
-
-// src/index.ts
-startDuplicateTabSession();
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  startDuplicateTabSession,
-  useDuplicateTabSession
-});
+export { DEFAULT_KEYS };

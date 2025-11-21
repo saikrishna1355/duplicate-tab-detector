@@ -10,10 +10,10 @@ npm install duplicate-tab-detector
 
 ## Usage
 
-One-line import (use your own UI or state handling):
+One-line side-effect import (automatically starts detection without needing a variable):
 
 ```tsx
-import useDuplicateTabSession from "duplicate-tab-detector";
+import "duplicate-tab-detector";
 ```
 
 Full example with a simple UI:
@@ -44,6 +44,9 @@ export function App() {
   );
 }
 ```
+
+If you prefer to start detection manually (for example, outside of React) you can
+call `startDuplicateTabSession()` from the package entry point.
 
 ### Options
 
